@@ -54,6 +54,7 @@
         2         Dini (Dini include by Dracoblue needed)
         3         MySQL R6 !unthreaded! (MySQL plugin/include by BlueG needed, R6, unthreaded queries)
 		4         SQLite (sampdb include by the SA-MP Team needed)
+        5         MySQL R6 !unthreaded! (MySQL plugin/include by BlueG needed, R6, unthreaded queries)
 */
 
 //-- SYSTEMATIC CONFIGURATION --//
@@ -90,16 +91,16 @@
 
 #if SAVING_SYS == 1
 	#include <YSI\y_ini> //Credits to Y_Less
-#endif
-#if SAVING_SYS == 2
+#elseif SAVING_SYS == 2
 	#include <Dini> //Credits to Dracoblue
-#endif
-#if SAVING_SYS == 3
+#elseif SAVING_SYS == 3
 	#include <a_mysql> //Credits to BlueG
-#endif
-#if SAVING_SYS == 4
+#elseif SAVING_SYS == 4
 	#include <a_sampdb> //Credits to the SA-MP Team
+#elseif SAVING_SYS == 5
+	#include <a_mysql_threaded> //Credits to BlueG, maddinat0r 
 #endif
+
 #if COMMAND_SYS == 1
     #include <zcmd> //Credits to Zeex
 #endif
@@ -110,7 +111,8 @@
 
 
 //=== ENUMS ===//
-enum garageInfo{
+enum garageInfo
+{
 
 	Owner[24], //Holds the name of the owner
 	Owned, //Holds the owned value (1 if owned, 0 if for sale)
@@ -120,11 +122,10 @@ enum garageInfo{
 	Float:PosY, //The outside Y position of the garage
 	Float:PosZ, //The outside Z position of the garage
 	Interior, //The internal interior number of the garage
- 	UID //Unique ID, keeps a unique ID of the garages so the virtualworld doesn't mix up when deleting and reloading garages,
- 	
+ 	UID //Unique ID, keeps a unique ID of the garages so the virtualworld doesn't mix up when deleting and reloading garages
 }
 
-//=== NEWS ===//
+//=== VARIABLE DECLARATIONS ===//
 new gInfo[MAX_GARAGES][garageInfo]; //This is used to access variable from our enumerator
 new garageCount; //This will hold the total of loaded garages
 new Float:GarageInteriors[][] = //This array holds the coordinates, facing angle and interior ID of the garages.
@@ -140,10 +141,12 @@ new lastGarage[MAX_PLAYERS]; //Will hold the last garage ID the player went in t
 new Seller[MAX_PLAYERS];
 new SellPrice[MAX_PLAYERS];
 new SellID[MAX_PLAYERS];
-#if SAVING_SYS == 4 //To prevent 'variable not used' warnings and such
+
+#if SAVING_SYS == 4 //To prevent 'variable not used' warnings and such, we only declare it if we need it.
 	new DB:Garages;
 #endif
-//=== PUBLICS ===//
+
+//=== PUBLIC FUNCTIONS ===//
 
 public OnFilterScriptInit()
 {
@@ -198,9 +201,7 @@ public Save_Garages() //Saves all the garages, changed to a public because of th
 			}
 	    }
 
-	#endif
-
-	#if SAVING_SYS == 2
+	#elseif SAVING_SYS == 2
 
 	    new path[64];
 		for(new i=0; i < garageCount+1; i++)
@@ -223,9 +224,7 @@ public Save_Garages() //Saves all the garages, changed to a public because of th
 			}
 		}
 
-	#endif
-
-	#if SAVING_SYS == 3
+	#elseif SAVING_SYS == 3
 
 		for(new i=0; i < garageCount+1; i++)
 		{
@@ -253,9 +252,7 @@ public Save_Garages() //Saves all the garages, changed to a public because of th
 			gInfo[i][UID]);
 			mysql_query(sql);
 		}
-	#endif
-
-	#if SAVING_SYS == 4
+	#elseif SAVING_SYS == 4
 
  		for(new i=0; i < garageCount+1; i++)
 		{
@@ -293,14 +290,13 @@ stock DoorFallFix() //Thanks for sending me these, CustomBuiltGaming :)
 	CreateDynamicObject(8661,608.7000100,-82.4000000,1001.0000000,90.0000000,0.0000000,90.0000000);
 	CreateDynamicObject(8661,603.7000100,-8.6000000,1005.2000000,90.0000000,0.0000000,90.0000000);
 }
+
 stock DoConnect()
 {
     #if SAVING_SYS == 3
 		mysql_debug(1);
 		mysql_connect(HOST,USER,DataB,PASS);
-	#endif
-
-	#if SAVING_SYS == 4
+	#elseif SAVING_SYS == 4
         Garages = db_open("jgarage/garages.db");
 	#endif
 }
@@ -308,18 +304,15 @@ stock CreateGarage(gid)
 {
     #if SAVING_SYS == 1
 		Save_Garage(gid); //y_ini creates the file automatically, so we'll just call the save function here.
-	#endif
-	#if SAVING_SYS == 2
+	#elseif SAVING_SYS == 2
 	    new path[64];
 		format(path,sizeof(path),"jgarage/dini/%d.ini",gid); //Format the path with the filenumber
 		dini_Create(path);
-	#endif
-	#if SAVING_SYS == 3
+	#elseif SAVING_SYS == 3
 	    new sql[128];
 		format(sql,sizeof(sql),"INSERT INTO `garages` (UID) VALUES ('%d')",gid); //Insert the UID into the SQL database, and save the data based on the UID
 		mysql_query(sql);
-	#endif
-	#if SAVING_SYS == 4
+	#elseif SAVING_SYS == 4
 	  	new sql[128];
 		format(sql,sizeof(sql),"INSERT INTO `garages` (UID) VALUES ('%d')",gid); //Insert the UID into the SQL database, and save the data based on the UID
         db_free_result(db_query(Garages,sql));
@@ -333,18 +326,15 @@ stock RemoveGarage(gid)
         new path[64];
 		format(path,sizeof(path),"jgarage/y_ini/%d.ini",gInfo[gid][UID]); //Format the path with the filenumber
 		if(fexist(path)) fremove(path);
-	#endif
-	#if SAVING_SYS == 2
+	#elseif SAVING_SYS == 2
 	   	new path[64];
 		format(path,sizeof(path),"jgarage/dini/%d.ini",gInfo[gid][UID]); //Format the path with the filenumber
 		dini_Remove(path);
-	#endif
-	#if SAVING_SYS == 3
+	#elseif SAVING_SYS == 3
 	    new sql[128];
 		format(sql,sizeof(sql),"DELETE FROM `garages` WHERE `UID`='%d'",gInfo[gid][UID]); //Format the removal query
 		mysql_query(sql);
-	#endif
-	#if SAVING_SYS == 4
+	#elseif SAVING_SYS == 4
         new sql[128];
 		format(sql,sizeof(sql),"DELETE FROM `garages` WHERE `UID`='%d'",gInfo[gid][UID]); //Format the removal query
 		db_query(Garages,sql);
@@ -391,9 +381,7 @@ stock Load_Garages() //Loads all garages
 		        }
 
 		}
-	#endif
-	
-	#if SAVING_SYS == 2
+	#elseif SAVING_SYS == 2
 
 	    
 		new path[64];
@@ -417,10 +405,7 @@ stock Load_Garages() //Loads all garages
 			}
 		}
 
-	#endif
-
-	
-	#if SAVING_SYS == 3
+	#elseif SAVING_SYS == 3
 	
 		new sql[128] = "SELECT * FROM `garages`";
 		new i;
@@ -438,9 +423,7 @@ stock Load_Garages() //Loads all garages
 		}
 		mysql_free_result();
 		
-	#endif
-	
-	#if SAVING_SYS == 4
+	#elseif SAVING_SYS == 4
 
 		new DBResult: Result;
         new Query[128] = "SELECT * FROM `garages`";
@@ -521,9 +504,7 @@ stock Save_Garage(gid) //Saves a specific garage
         INI_WriteInt(gfile, "UID", gInfo[gid][UID]);
 		INI_Close(gfile);
 
-	#endif
-	
-    #if SAVING_SYS == 2
+	#elseif SAVING_SYS == 2
 
 	    new path[64];
 		format(path,sizeof(path),"jgarage/dini/%d.ini",gid); //Format the path with the filenumber
@@ -539,9 +520,7 @@ stock Save_Garage(gid) //Saves a specific garage
 			dini_IntSet(path,"Interior",gInfo[gid][Interior]);
 			dini_IntSet(path,"UID",gInfo[gid][UID]);
 		}
- 	#endif
- 	
- 	#if SAVING_SYS == 3
+ 	#elseif SAVING_SYS == 3
  	
 		new sql[256];
 		format(sql,sizeof(sql),"UPDATE `garages` SET \
@@ -567,9 +546,7 @@ stock Save_Garage(gid) //Saves a specific garage
 		gInfo[gid][UID]);
 		mysql_query(sql);
 		
-	#endif
-	
-	#if SAVING_SYS == 4
+	#elseif SAVING_SYS == 4
 
 		new sql[256];
 		format(sql,sizeof(sql),"UPDATE `garages` SET \
@@ -620,7 +597,7 @@ stock UpdateGarageInfo(gid) //Updates/creates the garage text and label
 }
 stock GetLockedStatus(value) //Returns 'Locked' or 'Unlocked' according to the value given
 {
-	new out[64];
+	new out[4];
 	if(value == 1)
 	{
 	    out = "Yes";
@@ -633,8 +610,8 @@ stock GetLockedStatus(value) //Returns 'Locked' or 'Unlocked' according to the v
 }
 stock GetPlayerNameEx(playerid)
 {
-	new pName[24];
-	GetPlayerName(playerid,pName,24);
+	new pName[MAX_PLAYER_NAME];
+	GetPlayerName(playerid, pName, MAX_PLAYER_NAME);
 	return pName;
 }
 stock Remove_PickupsAndLabels()
