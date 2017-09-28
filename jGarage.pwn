@@ -159,10 +159,7 @@ public OnFilterScriptInit()
 	Load_Garages(); //Loads all garages
 	return 1;
 }
-public OnPlayerSpawn(playerid)
-{
-	GivePlayerMoney(playerid, 40000);
-}
+
 public OnFilterScriptExit()
 {
 	Save_Garages();
